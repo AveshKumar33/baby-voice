@@ -1,18 +1,33 @@
-from fastapi import FastAPI, UploadFile
+import sys
+import time
+from kafka import KafkaConsumer
 from producer import send_transcript
 
-app = FastAPI()
+print("ML Service: Starting Kafka consumer...")
 
-@app.get("/")
-def home():
-    return {"message": "ML Service Running"}
+# Consumer listens to 'audio.chunk'
+consumer = KafkaConsumer(
+    "audio.chunk",
+    bootstrap_servers=["kafka:9092"],
+    auto_offset_reset="latest",
+    enable_auto_commit=True,
+    group_id="ml-service-group"
+)
 
-@app.post("/process-audio")
-async def process_audio(file: UploadFile):
-    # Dummy ML prediction for now
-    fake_text = "This is a test transcript from ML service."
+print("ML Service: Waiting for audio messages...")
 
-    # send to Kafka
-    send_transcript(fake_text)
+for msg in consumer:
+    try:
+        audio_bytes = msg.value  # raw audio chunk
 
-    return {"transcript": fake_text}
+        # TODO: Run ML speech-to-text here
+        fake_text = "This is a test transcript from ML service."
+
+        print("ML Service: Processed audio →", fake_text)
+
+        # Push text → Kafka topic: ml.transcript
+        send_transcript(fake_text)
+
+    except Exception as e:
+        print("ML Service Error:", e)
+        time.sleep(1)

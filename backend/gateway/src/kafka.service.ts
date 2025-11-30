@@ -8,26 +8,26 @@ export class KafkaService {
     });
 
     producer = this.kafka.producer();
-    consumer = this.kafka.consumer({ groupId: 'gateway-consumer' });
+    consumer = this.kafka.consumer({ groupId: 'gateway-consumers' });
 
     async onModuleInit() {
         await this.producer.connect();
         await this.consumer.connect();
 
-        await this.consumer.subscribe({ topic: 'ml.transcript', fromBeginning: false });
+        await this.consumer.subscribe({ topic: 'ml.transcript' });
 
-        // ML → Gateway → Frontend
         this.consumer.run({
             eachMessage: async ({ message }) => {
-                global['gatewaySocket'].emit("transcript", message?.value?.toString());
-            },
+                const text = message?.value?.toString();
+                global['gatewaySocket'].emit("transcript", text);
+            }
         });
     }
 
-    sendToML(textBuffer: Buffer) {
+    sendToML(buffer: Buffer) {
         return this.producer.send({
-            topic: 'audio.chunk',
-            messages: [{ value: textBuffer }],
+            topic: "audio.chunk",
+            messages: [{ value: buffer }],
         });
     }
 }

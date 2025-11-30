@@ -1,23 +1,26 @@
-import { MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+import {
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
+  MessageBody,
+} from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { KafkaService } from './kafka.service';
 
-@WebSocketGateway({
-    cors: { origin: "*" }
-})
+@WebSocketGateway({ cors: { origin: "*" } })
 export class AppGateway {
-    @WebSocketServer()
-    server: Server;
+  @WebSocketServer()
+  server: Server;
 
-    constructor(private kafka: KafkaService) { }
+  constructor(private readonly kafka: KafkaService) { }
 
-    afterInit() {
-        global['gatewaySocket'] = this.server;
-    }
+  afterInit() {
+    global['gatewaySocket'] = this.server;
+  }
 
-    // Frontend → Gateway → Kafka
-    @SubscribeMessage('audio')
-    handleAudio(@MessageBody() chunk: any) {
-        this.kafka.sendToML(Buffer.from(chunk));
-    }
+  // React -> Gateway -> Kafka
+  @SubscribeMessage('audio')
+  handleAudio(@MessageBody() chunk: any) {
+    this.kafka.sendToML(Buffer.from(chunk));
+  }
 }

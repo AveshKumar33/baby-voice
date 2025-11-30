@@ -1,11 +1,13 @@
-from confluent_kafka import Producer
+from kafka import KafkaProducer
 
-config = {
-    "bootstrap.servers": "kafka:9092"
-}
-
-producer = Producer(config)
+producer = KafkaProducer(
+    bootstrap_servers=["kafka:9092"]
+)
 
 def send_transcript(text: str):
-    producer.produce("ml.transcript", value=text.encode("utf-8"))
+    print("ML Service: Sending transcript to Kafka...")
+    producer.send(
+        "ml.transcript",
+        value=text.encode("utf-8")
+    )
     producer.flush()
