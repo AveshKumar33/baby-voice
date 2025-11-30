@@ -5,4 +5,17 @@ export class AppService {
   getHello(): string {
     return 'Hello World!';
   }
+
+  processAudio(file: Express.Multer.File) {
+    console.log('Audio received:', file.originalname);
+    console.log('Size:', file.size);
+
+    // Later you can save to Mongo/GridFS here
+
+    return {
+      message: 'Audio uploaded successfully',
+      fileName: file.originalname,
+      size: file.size
+    };
+  }
 }
