@@ -2,7 +2,7 @@ import { io } from "socket.io-client";
 
 class SocketService {
     constructor() {
-        // Connect to NestJS Gateway
+        /** Connect to NestJS Gateway */
         this.socket = io("http://localhost:4000", {
             transports: ["websocket"],
             reconnection: true,
@@ -11,7 +11,7 @@ class SocketService {
         });
     }
 
-    // Emit audio chunks to backend
+    /** Emit audio chunks to backend */
     emitAudio(chunk) {
         if (this.socket.connected) {
             this.socket.emit("audio", chunk);
@@ -20,10 +20,10 @@ class SocketService {
         }
     }
 
-    // Listen for transcript updates
+    /** Listen for transcript updates */
     onTranscript(callback) {
         if (typeof callback === "function") {
-            this.socket.off("transcript"); // remove previous listeners
+            this.socket.off("transcript"); /** remove previous listeners */
             this.socket.on("transcript", callback);
         }
     }

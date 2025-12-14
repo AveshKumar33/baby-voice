@@ -14,10 +14,22 @@ export class AppGateway {
 
   constructor(private readonly kafkaService: KafkaService) { }
 
+  afterInit(server: Server) {
+    console.log("WebSocket Gateway initialized");
+  }
+
+  handleConnection(client: any, ...args: any[]) {
+    console.log(`Client connected: ${client.id}`);
+  }
+
+  handleDisconnect(client: any) {
+    console.log(`Client disconnected: ${client.id}`);
+  }
+
   /** health Check from frontend */
   @SubscribeMessage('healthCheck')
   healthCheck(@MessageBody() message: any) {
-    console.log('connected now', message,);
+    console.log('connected now', message);
   }
 
   /** Audio stream from frontend */
