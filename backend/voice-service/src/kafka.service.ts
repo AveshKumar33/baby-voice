@@ -9,44 +9,42 @@ import Redis from 'ioredis';
 export class KafkaService implements OnModuleInit {
     private readonly logger = new Logger(KafkaService.name);
 
-    redis = new Redis({ host: 'redis', port: 6379 });
-
-    constructor(
-        @InjectModel(Transcript.name) private transcriptModel: Model<Transcript>,
-    ) { }
-
-    kafka = new Kafka({
+    private kafka = new Kafka({
         clientId: 'voice-service',
         brokers: ['kafka:9092'],
     });
 
-    consumer = this.kafka.consumer({ groupId: 'voice-service-group' });
+    private consumer = this.kafka.consumer({
+        groupId: 'voice-service-group',
+    });
+
+    private redis = new Redis({ host: 'redis', port: 6379 });
+
+    constructor(
+        @InjectModel(Transcript.name)
+        private readonly transcriptModel: Model<Transcript>,
+    ) { }
 
     async onModuleInit() {
-        try {
-            await this.consumer.connect();
-            this.logger.log('Kafka Connected');
+        await this.consumer.connect();
+        this.logger.log('Kafka Connected');
 
-            await this.consumer.subscribe({ topic: 'ml.transcript' });
-            this.logger.log('Subscribed to topic: ml.transcript');
+        await this.consumer.subscribe({ topic: 'ml.transcript' });
 
-            await this.consumer.run({
-                eachMessage: async ({ topic, message }) => {
-                    const data = message.value?.toString();
-                    this.logger.log(`Received from Kafka: ${data}`);
+        await this.consumer.run({
+            eachMessage: async ({ message }) => {
+                if (!message.value) return;
 
-                    if (!data) return;
+                const parsed = JSON.parse(message.value.toString());
 
-                    const parsed = JSON.parse(data);
+                // 1️⃣ Save to MongoDB
+                await this.transcriptModel.create(parsed);
 
-                    const saved = await this.transcriptModel.create(parsed);
-                    this.logger.log('Transcript saved to MongoDB');
+                // 2️⃣ Cache latest transcript in Redis
+                await this.redis.set('latest-transcript', parsed.text);
 
-                    await this.redis.set('latest-transcript', parsed.text);
-                },
-            });
-        } catch (err) {
-            this.logger.error('Error initializing Kafka:', err);
-        }
+                this.logger.log('Transcript saved & cached');
+            },
+        });
     }
 }

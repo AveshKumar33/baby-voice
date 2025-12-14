@@ -7,7 +7,7 @@ import { Transcript, TranscriptSchema } from './transcript.schema';
 
 @Module({
   imports: [
-    MongooseModule.forRoot('mongodb+srv://katiyaravesh333:root@cluster0.3wojr.mongodb.net/voice-reader?retryWrites=true&w=majority'),
+    MongooseModule.forRoot(process.env.MONGO_URI as string),
     MongooseModule.forFeature([
       { name: Transcript.name, schema: TranscriptSchema },
     ]),

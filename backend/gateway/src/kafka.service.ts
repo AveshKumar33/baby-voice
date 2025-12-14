@@ -1,33 +1,32 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Kafka } from 'kafkajs';
+import Redis from 'ioredis';
 
 @Injectable()
-export class KafkaService {
-    kafka = new Kafka({
+export class KafkaService implements OnModuleInit {
+    private readonly logger = new Logger(KafkaService.name);
+
+    private kafka = new Kafka({
+        clientId: 'gateway',
         brokers: ['kafka:9092'],
     });
 
-    producer = this.kafka.producer();
-    consumer = this.kafka.consumer({ groupId: 'gateway-consumers' });
+    private producer = this.kafka.producer();
+    private redis = new Redis({ host: 'redis', port: 6379 });
 
     async onModuleInit() {
         await this.producer.connect();
-        await this.consumer.connect();
+        this.logger.log('Kafka Producer Connected');
+    }
 
-        await this.consumer.subscribe({ topic: 'ml.transcript' });
-
-        this.consumer.run({
-            eachMessage: async ({ message }) => {
-                const text = message?.value?.toString();
-                global['gatewaySocket'].emit("transcript", text);
-            }
+    async sendToML(buffer: Buffer) {
+        await this.producer.send({
+            topic: 'audio.chunk',
+            messages: [{ value: buffer }],
         });
     }
 
-    sendToML(buffer: Buffer) {
-        return this.producer.send({
-            topic: "audio.chunk",
-            messages: [{ value: buffer }],
-        });
+    async getLatestTranscript(): Promise<string | null> {
+        return this.redis.get('latest-transcript');
     }
 }
