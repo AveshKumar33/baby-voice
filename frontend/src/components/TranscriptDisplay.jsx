@@ -11,10 +11,16 @@ export const TranscriptDisplay = () => {
     }, []);
 
     return (
-        <div className="p-4 border rounded h-64 overflow-y-auto bg-gray-50">
-            {transcripts.map((t, i) => (
-                <p key={i}>{t}</p>
-            ))}
+        <div className="h-64 p-4 border rounded-lg bg-white overflow-y-auto">
+            {transcripts.length === 0 ? (
+                <p className="text-gray-400 text-center">No transcripts yet</p>
+            ) : (
+                transcripts.map((t, i) => (
+                    <p key={i} className="mb-1">
+                        {t}
+                    </p>
+                ))
+            )}
         </div>
     );
 };

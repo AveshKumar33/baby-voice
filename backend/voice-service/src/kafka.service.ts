@@ -14,10 +14,8 @@ export class KafkaService implements OnModuleInit {
         brokers: ['kafka:9092'],
     });
 
-    private consumer = this.kafka.consumer({
-        groupId: 'voice-service-group',
-    });
-
+    private consumer = this.kafka.consumer({ groupId: 'voice-service-group' });
+    private producer = this.kafka.producer();
     private redis = new Redis({ host: 'redis', port: 6379 });
 
     constructor(
@@ -27,23 +25,31 @@ export class KafkaService implements OnModuleInit {
 
     async onModuleInit() {
         await this.consumer.connect();
-        this.logger.log('Kafka Connected');
-
+        await this.producer.connect();
+        this.logger.log('Kafka Connected (consumer + producer)');
         await this.consumer.subscribe({ topic: 'ml.transcript' });
-
         await this.consumer.run({
             eachMessage: async ({ message }) => {
                 if (!message.value) return;
-
                 const parsed = JSON.parse(message.value.toString());
-
-                // 1️⃣ Save to MongoDB
-                await this.transcriptModel.create(parsed);
-
-                // 2️⃣ Cache latest transcript in Redis
+                /** Save to MongoDB */
+                const data = await this.transcriptModel.create({
+                    text: parsed.text,
+                    confidence: parsed.confidence,
+                    model_name: parsed.model_name,
+                    audio_duration: parsed.audio_duration,
+                    language: parsed.language,
+                });
+                console.log('data:::', data);
+                /** Cache latest transcript in Redis */
                 await this.redis.set('latest-transcript', parsed.text);
+                /** Produce to a new topic for the gateway */
+                await this.producer.send({
+                    topic: 'gateway.transcript',
+                    messages: [{ value: JSON.stringify(parsed) }],
+                });
 
-                this.logger.log('Transcript saved & cached');
+                this.logger.log('Transcript saved, cached & sent to gateway topic');
             },
         });
     }

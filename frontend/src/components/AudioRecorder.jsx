@@ -7,30 +7,57 @@ export const AudioRecorder = () => {
 
     const startRecording = async () => {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const audioContext = new AudioContext();
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 2048;
+        source.connect(analyser);
+        const dataArray = new Uint8Array(analyser.fftSize);
+
         const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
 
-        mediaRecorder.ondataavailable = (e) => {
-            socketService.emitAudio(e.data);
+        mediaRecorder.ondataavailable = async (e) => {
+            analyser.getByteTimeDomainData(dataArray);
+            // compute approximate volume
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                const val = dataArray[i] - 128;
+                sum += val * val;
+            }
+            const rms = Math.sqrt(sum / dataArray.length); // RMS value
+            if (rms > 10) { // only emit if loud enough
+                const arrayBuffer = await e.data.arrayBuffer();
+                socketService.emitAudio(arrayBuffer);
+            }
         };
 
-        mediaRecorder.start(300); // emit chunk every 300ms
+        mediaRecorder.start(300); // check every 300ms
         mediaRecorderRef.current = mediaRecorder;
         setRecording(true);
     };
 
+
+
     const stopRecording = () => {
-        mediaRecorderRef.current?.stop();
-        setRecording(false);
+        if (mediaRecorderRef.current) {
+            mediaRecorderRef.current.stop();
+            mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
+            setRecording(false);
+        }
     };
 
     return (
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex items-center gap-4">
             <button
                 onClick={recording ? stopRecording : startRecording}
-                className="px-4 py-2 bg-blue-600 text-white rounded"
+                className={`px-6 py-3 rounded-full font-bold shadow-lg text-white transition-all duration-200
+                    ${recording ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"}`}
             >
-                {recording ? "Stop Recording" : "Start Recording"}
+                {recording ? "Stop" : "Record"}
             </button>
+            <span className="text-gray-700 font-medium">
+                {recording ? "Recording..." : "Tap to speak"}
+            </span>
         </div>
     );
 };

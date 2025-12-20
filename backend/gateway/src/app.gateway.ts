@@ -1,24 +1,27 @@
-import {
-  WebSocketGateway,
-  WebSocketServer,
-  SubscribeMessage,
-  MessageBody,
-} from '@nestjs/websockets';
+import { WebSocketGateway, WebSocketServer, SubscribeMessage, MessageBody, OnGatewayInit } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { KafkaService } from './kafka.service';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 
-@WebSocketGateway({ cors: { origin: '*' } })
-export class AppGateway {
+@WebSocketGateway({
+  cors: { origin: '*' }, transports: ['websocket']
+})
+export class AppGateway implements OnGatewayInit {
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly kafkaService: KafkaService) { }
+  constructor(private readonly kafkaService: KafkaService, private eventEmitter: EventEmitter2) {
+    // Listen for newTranscript events
+    this.eventEmitter.on('newTranscript', (text: string) => {
+      this.server?.emit('transcript', text);
+    });
+  }
 
   afterInit(server: Server) {
     console.log("WebSocket Gateway initialized");
   }
 
-  handleConnection(client: any, ...args: any[]) {
+  handleConnection(client: any) {
     console.log(`Client connected: ${client.id}`);
   }
 
@@ -26,19 +29,17 @@ export class AppGateway {
     console.log(`Client disconnected: ${client.id}`);
   }
 
-  /** health Check from frontend */
   @SubscribeMessage('healthCheck')
   healthCheck(@MessageBody() message: any) {
     console.log('connected now', message);
   }
 
-  /** Audio stream from frontend */
   @SubscribeMessage('audio')
-  handleAudio(@MessageBody() chunk: ArrayBuffer) {
-    this.kafkaService.sendToML(Buffer.from(chunk));
+  handleAudio(@MessageBody() chunk: Uint8Array) {
+    const buffer = Buffer.from(chunk);
+    this.kafkaService.sendToML(buffer);
   }
 
-  /** Frontend requests latest transcript */
   @SubscribeMessage('get-latest')
   async handleGetLatest() {
     const text = await this.kafkaService.getLatestTranscript();

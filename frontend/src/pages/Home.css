@@ -1,0 +1,80 @@
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: #f0f0f0;
+    font-family: sans-serif;
+}
+
+.chat-header {
+    background-color: #25d366;
+    color: white;
+    padding: 16px;
+    font-weight: bold;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.chat-messages {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chat-bubble {
+    padding: 10px 14px;
+    border-radius: 20px;
+    max-width: 70%;
+    word-wrap: break-word;
+}
+
+.chat-bubble.user {
+    background-color: #dcf8c6;
+    align-self: flex-end;
+}
+
+.chat-bubble.bot {
+    background-color: #fff;
+    align-self: flex-start;
+}
+
+.chat-footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background-color: #eee;
+}
+
+.record-btn {
+    padding: 10px 20px;
+    border-radius: 25px;
+    border: none;
+    font-weight: bold;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.record-btn.start {
+    background-color: #34b7f1;
+}
+
+.record-btn.start:hover {
+    background-color: #0b93d5;
+}
+
+.record-btn.stop {
+    background-color: #ff4d4d;
+}
+
+.record-btn.stop:hover {
+    background-color: #cc0000;
+}
+
+.record-status {
+    font-weight: 500;
+}

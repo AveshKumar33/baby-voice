@@ -140,10 +140,11 @@ services:
   ml-service:
     build:
       context: ./ml-service
+    env_file:
+      - ./ml-service/.env
     depends_on:
       kafka:
         condition: service_healthy
     networks:
       - voice-network
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    restart: always
